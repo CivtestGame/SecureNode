@@ -69,16 +69,18 @@ container_load = (pos, node) ->
     container_hide(pos)
     return
 
+all_containers = {}
 securenode.register_container = (name) ->
     node = registered_nodes[name]
     if not node
         error("[SecureNode] Failed to register container: " .. name)
 
     -- register lbm to hide on load
+    table.insert(all_containers, name)
     register_lbm({
         label: "Hide node inventory",
-        name: "securenode:" .. string.gsub(name,":","_"),
-        nodenames: {name},
+        name: "securenode:containers",
+        nodenames: all_containers,
         run_at_every_load: true,
         action: container_load,
     })
@@ -87,13 +89,11 @@ securenode.register_container = (name) ->
     orig_rclick = node.on_rightclick
     override_item(name, {
         on_rightclick: (pos, n, c, i, p) ->
-            debug("hi")
             container_unhide(pos)
             if orig_rclick
                 orig_rclick(pos, n, c, i, p)
             return,
         on_timer: (pos) ->
-            debug("bye")
             container_hide(pos)
             return false
     })
