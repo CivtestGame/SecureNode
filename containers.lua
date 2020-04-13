@@ -81,16 +81,25 @@ securenode.register_container = function(name)
     action = container_load
   })
   local orig_rclick = node.on_rightclick
+  local orig_onpunch = node.on_punch
   override_item(name, {
     on_rightclick = function(pos, n, c, i, p)
       container_unhide(pos)
       if orig_rclick then
-        orig_rclick(pos, n, c, i, p)
+        return orig_rclick(pos, n, c, i, p)
       end
     end,
     on_timer = function(pos)
       container_hide(pos)
       return false
+    end,
+    on_punch = function(pos, n, pu, po)
+      container_unhide(pos)
+      if orig_onpunch then
+        return orig_onpunch(pos, n, pu, po)
+      end
     end
   })
 end
+securenode.container_hide = container_hide
+securenode.container_unhide = container_unhide

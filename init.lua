@@ -1,5 +1,7 @@
 securenode = {
-  register_container = nil
+  register_container = nil,
+  container_hide = nil,
+  container_unhide = nil
 }
 local get_modpath, get_current_modname, registered_nodes
 do

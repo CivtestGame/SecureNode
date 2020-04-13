@@ -1,6 +1,9 @@
 -- Public api
 export securenode = {
-    register_container: nil -- register_container(name) -- Registers a node to hide its main inventory
+    register_container: nil, -- register_container(name) -- Registers a node to hide its main inventory
+    container_hide: nil, -- container_hide(pos) -- Hides the inventory of a node
+    container_unhide: nil, -- container_unhide(pos) -- Unhides the inventory of a node
+
 }
 
 import get_modpath, get_current_modname, registered_nodes from minetest

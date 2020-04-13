@@ -87,16 +87,25 @@ securenode.register_container = (name) ->
 
     -- override node to apply timer and right click wrapper
     orig_rclick = node.on_rightclick
+    orig_onpunch = node.on_punch
     override_item(name, {
         on_rightclick: (pos, n, c, i, p) ->
             container_unhide(pos)
             if orig_rclick
-                orig_rclick(pos, n, c, i, p)
+                return orig_rclick(pos, n, c, i, p)
             return,
         on_timer: (pos) ->
             container_hide(pos)
-            return false
+            return false,
+        on_punch: (pos, n, pu, po) ->
+            container_unhide(pos)
+            if orig_onpunch
+                return orig_onpunch(pos,n,pu, po)
+            return,
     })
     return
+
+securenode.container_hide = container_hide
+securenode.container_unhide = container_unhide
 
 return
