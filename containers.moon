@@ -18,15 +18,26 @@ deserialize_inv = (strinv) ->
 container_unhide = (pos) ->
     -- enable hide timer
     timer = get_node_timer(pos)
-    timer\start(5)
+    timer\start(10)
 
     meta = get_meta(pos)
-    invstr = meta\get_string("secured")
+    invstr = meta\get_string("securenode:inv")
     if invstr != ""
         inv = meta\get_inventory()
-        inv\set_list("main", deserialize_inv(invstr))
-        meta\set_string("secured", "")
-        meta\mark_as_private("secured")
+        oldinv = nil
+        if not inv\is_empty("main")
+            oldinv = inv\get_list("main")
+
+        invlist = deserialize_inv(invstr)
+        inv\set_list("main", invlist)
+
+        -- merge items added after inv was hidden
+        if oldinv
+            for _,stack in ipairs(oldinv)
+                inv\add_item("main", stack)
+
+        meta\set_string("securenode:inv", "")
+        meta\mark_as_private("securenode:inv")
 
 container_hide = (pos) ->
     -- disable timer
@@ -38,9 +49,16 @@ container_hide = (pos) ->
     inv = meta\get_inventory()
     -- if not empty, stash it in the priv
     if not inv\is_empty("main")
+        -- merge previously hidden inv
+        oldinvstr = meta\get_string("securenode:inv")
+        if oldinvstr != ""
+            invlist = deserialize_inv(oldinvstr)
+            for _,stack in ipairs(invlist)
+                inv\add_item("main", stack)
+
         invstr = serialize_inv(inv\get_list("main"))
-        meta\set_string("secured", invstr)
-        meta\mark_as_private("secured")
+        meta\set_string("securenode:inv", invstr)
+        meta\mark_as_private("securenode:inv")
 
         -- empty inv
         inv\set_list("main", {})
@@ -54,12 +72,13 @@ container_load = (pos, node) ->
 securenode.register_container = (name) ->
     node = registered_nodes[name]
     if not node
-        error("Chest node not found")
+        error("[SecureNode] Failed to register container: " .. name)
+
     -- register lbm to hide on load
     register_lbm({
-        label: "Hide chest inventories",
-        name: "securenode:chest",
-        nodenames: {"default:chest"},
+        label: "Hide node inventory",
+        name: "securenode:" .. string.gsub(name,":","_"),
+        nodenames: {name},
         run_at_every_load: true,
         action: container_load,
     })
@@ -68,15 +87,16 @@ securenode.register_container = (name) ->
     orig_rclick = node.on_rightclick
     override_item(name, {
         on_rightclick: (pos, n, c, i, p) ->
+            debug("hi")
             container_unhide(pos)
-            orig_rclick(pos, n, c, i, p)
+            if orig_rclick
+                orig_rclick(pos, n, c, i, p)
             return,
         on_timer: (pos) ->
+            debug("bye")
             container_hide(pos)
             return false
     })
     return
-
-
 
 return

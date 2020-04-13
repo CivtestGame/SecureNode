@@ -22,14 +22,24 @@ end
 local container_unhide
 container_unhide = function(pos)
   local timer = get_node_timer(pos)
-  timer:start(5)
+  timer:start(10)
   local meta = get_meta(pos)
-  local invstr = meta:get_string("secured")
+  local invstr = meta:get_string("securenode:inv")
   if invstr ~= "" then
     local inv = meta:get_inventory()
-    inv:set_list("main", deserialize_inv(invstr))
-    meta:set_string("secured", "")
-    return meta:mark_as_private("secured")
+    local oldinv = nil
+    if not inv:is_empty("main") then
+      oldinv = inv:get_list("main")
+    end
+    local invlist = deserialize_inv(invstr)
+    inv:set_list("main", invlist)
+    if oldinv then
+      for _, stack in ipairs(oldinv) do
+        inv:add_item("main", stack)
+      end
+    end
+    meta:set_string("securenode:inv", "")
+    return meta:mark_as_private("securenode:inv")
   end
 end
 local container_hide
@@ -39,9 +49,16 @@ container_hide = function(pos)
   local meta = get_meta(pos)
   local inv = meta:get_inventory()
   if not inv:is_empty("main") then
+    local oldinvstr = meta:get_string("securenode:inv")
+    if oldinvstr ~= "" then
+      local invlist = deserialize_inv(oldinvstr)
+      for _, stack in ipairs(invlist) do
+        inv:add_item("main", stack)
+      end
+    end
     local invstr = serialize_inv(inv:get_list("main"))
-    meta:set_string("secured", invstr)
-    meta:mark_as_private("secured")
+    meta:set_string("securenode:inv", invstr)
+    meta:mark_as_private("securenode:inv")
     inv:set_list("main", { })
   end
 end
@@ -52,13 +69,13 @@ end
 securenode.register_container = function(name)
   local node = registered_nodes[name]
   if not node then
-    error("Chest node not found")
+    error("[SecureNode] Failed to register container: " .. name)
   end
   register_lbm({
-    label = "Hide chest inventories",
-    name = "securenode:chest",
+    label = "Hide node inventory",
+    name = "securenode:" .. string.gsub(name, ":", "_"),
     nodenames = {
-      "default:chest"
+      name
     },
     run_at_every_load = true,
     action = container_load
@@ -66,10 +83,14 @@ securenode.register_container = function(name)
   local orig_rclick = node.on_rightclick
   override_item(name, {
     on_rightclick = function(pos, n, c, i, p)
+      debug("hi")
       container_unhide(pos)
-      orig_rclick(pos, n, c, i, p)
+      if orig_rclick then
+        orig_rclick(pos, n, c, i, p)
+      end
     end,
     on_timer = function(pos)
+      debug("bye")
       container_hide(pos)
       return false
     end
